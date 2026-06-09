@@ -60,7 +60,7 @@ async function loginUser(req, res) {
         })
     }
 
-    const isPasswordCorrect = await bcrypt.hash(password, user.password)
+    const isPasswordCorrect = await bcrypt.compare(password, user.password)
 
     if(!isPasswordCorrect){
         return res.status(401).json({
