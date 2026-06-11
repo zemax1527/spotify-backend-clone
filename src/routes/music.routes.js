@@ -7,4 +7,6 @@ const upload = multer({
     storage : multer.memoryStorage()
 })
 router.post('/upload-music',upload.single('music'), musicController.createMusic )
+
+router.post('/create-album', musicController.createAlbum )
 module.exports = router
