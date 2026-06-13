@@ -19,9 +19,10 @@ async function authArtist(req, res, next) {
                     message: 'Forbidden'
                 })
             }
+            
+               req.user = decoded
                next()
 
-               req.user = decoded
         }catch (err) {
         console.log(err)
 

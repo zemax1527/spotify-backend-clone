@@ -38,47 +38,74 @@ async function createMusic(req, res) {
 }
 
 async function createAlbum(req, res) {
-        
-        const { title, musicId } = req.body
+    const {title , musics} = req.body
 
-        const musics = await musicModel.find({
-        _id: { $in: musicId }
-        })
+     const isExist = await albumModel.findOne({
+        title,
+        artist: req.user.id
+    });
 
-        const isValid = musics.every( 
-            music => music.artist.toString() == req.user.id.toString()
-        ) 
-  
-        if(!isValid){
-            return res.status(403).json({ message : 'you can add only own song '})
+    if (isExist) {
+        return res.status(400).json({
+            message: "Album already exists"
+        });
+    }
+
+    const song = await musicModel.find({
+        _id : { $in : musics },
+        artist : req.user.id
+    })
+
+    if (song.length !== musics.length) {
+        return res.status(400).json({
+            message: "You can add only your own songs"
+        });
+    }
+
+    const album = await albumModel.create({
+          title,
+          artist : req.user.id ,
+          musics : musics
+    })
+
+    res.status(200).json({
+        message : 'album fetched successfully',
+        album : {
+             id : album._id,
+             title : album.title,
+             artist : album.artist,
+             musics : album.musics
         }
-        
-        const isExist = await albumModel.findOne({
-        artist: req.user.id,
-        musics: musicId
-        })
+    })
+}
 
-        if(isExist){
-            return res.status(401).json({
-                message : 'this music exist on playlist'
-            })
-        }
+async function addSongInAlbum(req, res) {
+    const { musicId } = req.body;
+    const { albumId } = req.params;
 
-        const album = await albumModel.create({
-            title,
-            artist : req.user.id,
-            musics : musicId
-        })
-
-
-        res.status(201).json({
-            message : 'artist album created ',
-            id : album._id,
-            title : album.title,
-            musics : album.musics,
-            artist : req.user.id 
-        })
+    const album = await albumModel.findById(albumId);
     
+
+    if (!album) {
+        return res.status(404).json({
+            message: "Album not found"
+        });
+    }
+
+    if (album.musics.some(id => id.toString() === musicId)) {
+        return res.status(400).json({
+            message: "Song already exists in album"
+        });
+    }
+
+    album.musics.push(musicId);
+
+    await album.save();
+
+    res.status(200).json({
+        message: "Song added successfully",
+        album
+    });
 }
 
 async function getAllMusic(req, res) {
@@ -99,6 +126,33 @@ async function getAllAlbum(req, res) {
     })
 }
 
+async function getAlbumById(req, res) {
+    try {
+        const { id } = req.params;
+
+        const album = await albumModel
+            .findById(id)
+            .populate('artist')
+            .populate('musics')
+
+        if (!album) {
+            return res.status(404).json({
+                message: 'Album not found'
+            });
+        }
+
+        res.status(200).json({
+            message: 'Album fetched successfully',
+            album
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+}
 module.exports = {
-    createMusic , createAlbum , getAllMusic ,getAllAlbum
+    createMusic , createAlbum , getAllMusic , getAllAlbum , getAlbumById ,
+    addSongInAlbum
 }
